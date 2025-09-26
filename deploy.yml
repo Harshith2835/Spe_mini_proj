@@ -12,10 +12,23 @@
         name: scientific-calculator
         state: absent
 
-    - name: Run the new calculator container
+    - name: Run the new calculator container in detached mode
       docker_container:
         name: scientific-calculator
         image: harsh2835/spe_mini_project:latest
         state: started
-        interactive: yes
-        tty: yes
+        detached: yes
+
+    - name: Verify calculator functionality with a test command
+      shell: >
+        docker exec scientific-calculator
+        python3 -c "from calculator import ScientificCalculator;
+        calc = ScientificCalculator();
+        result = calc.square_root(16);
+        print(f'Verification successful: sqrt(16) is {result}');
+        assert result == 4.0"
+      register: verification_result
+
+    - name: Print verification result
+      debug:
+        var: verification_result.stdout
