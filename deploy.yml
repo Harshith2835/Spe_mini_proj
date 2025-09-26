@@ -17,7 +17,7 @@
         name: scientific-calculator
         image: harsh2835/spe_mini_project:latest
         state: started
-        detached: yes
+        detach: yes
 
     - name: Verify calculator functionality with a test command
       shell: >
