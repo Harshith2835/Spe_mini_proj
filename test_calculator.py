@@ -16,6 +16,7 @@ class TestScientificCalculator(unittest.TestCase):
         self.assertEqual(self.calc.square_root(4), 2.0)
         self.assertEqual(self.calc.square_root(9), 3.0)
         self.assertEqual(self.calc.square_root(16), 4.0)
+        self.assertEqual(self.calc.square_root(25), 5.0)
         self.assertAlmostEqual(self.calc.square_root(2), 1.4142135623730951)
         self.assertEqual(self.calc.square_root(0), 0.0)
     
