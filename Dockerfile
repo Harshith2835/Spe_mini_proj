@@ -40,8 +40,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "from calculator import ScientificCalculator; calc = ScientificCalculator(); print('Health check passed')" || exit 1
 
 # Default command to run the calculator
-CMD ["python", "calculator.py"]
-
-# Alternative commands for different use cases:
-# Run tests: docker run <image> python -m pytest test_calculator.py -v
-# Interactive mode: docker run -it <image> python calculator.py
+CMD ["python3", "calculator.py"]
