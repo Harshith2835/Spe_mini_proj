@@ -1,180 +1,21 @@
 ---
-# Ansible Playbook for Scientific Calculator Deployment
-# This playbook deploys the Scientific Calculator Docker container to target hosts
-
-- name: Deploy Scientific Calculator Application
-  hosts: localhost  # Change to your target hosts group
-  become: yes
-  vars:
-    # Application variables
-    app_name: scientific-calculator
-    docker_image: yourusername/scientific-calculator:latest
-    container_name: "{{ app_name }}-container"
-    host_port: 8080
-    container_port: 8080
-    
-    # Docker Hub credentials (use Ansible Vault in production)
-    dockerhub_username: "{{ vault_dockerhub_username | default('yourusername') }}"
-    dockerhub_password: "{{ vault_dockerhub_password | default('yourpassword') }}"
-    
-    # Application directories
-    app_dir: "/opt/{{ app_name }}"
-    logs_dir: "{{ app_dir }}/logs"
-    data_dir: "{{ app_dir }}/data"
-
+- hosts: localhost
+  connection: local
   tasks:
-    - name: Display deployment information
-      debug:
-        msg:
-          - "Deploying {{ app_name }}"
-          - "Docker image: {{ docker_image }}"
-          - "Target host: {{ inventory_hostname }}"
-          - "Timestamp: {{ ansible_date_time.iso8601 }}"
-
-    - name: Update system packages
-      package:
-        name: "*"
-        state: latest
-      when: ansible_os_family == "RedHat"
-
-    - name: Update apt packages
-      apt:
-        upgrade: dist
-        update_cache: yes
-      when: ansible_os_family == "Debian"
-
-    - name: Install required packages
-      package:
-        name:
-          - docker.io
-          - python3-pip
-          - curl
-          - wget
-        state: present
-
-    - name: Install Docker SDK for Python
-      pip:
-        name: docker
-        state: present
-
-    - name: Start and enable Docker service
-      systemd:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Add current user to docker group
-      user:
-        name: "{{ ansible_user_id }}"
-        groups: docker
-        append: yes
-
-    - name: Create application directory structure
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-        owner: "{{ ansible_user_id }}"
-        group: docker
-      loop:
-        - "{{ app_dir }}"
-        - "{{ logs_dir }}"
-        - "{{ data_dir }}"
-
-    - name: Check if container is already running
-      docker_container_info:
-        name: "{{ container_name }}"
-      register: container_info
-
-    - name: Stop existing container if running
-      docker_container:
-        name: "{{ container_name }}"
-        state: stopped
-      when: container_info.exists and container_info.container.State.Running
-
-    - name: Remove existing container
-      docker_container:
-        name: "{{ container_name }}"
-        state: absent
-      when: container_info.exists
-
-    - name: Login to Docker Hub
-      docker_login:
-        username: "{{ dockerhub_username }}"
-        password: "{{ dockerhub_password }}"
-        registry_url: https://index.docker.io/v1/
-      no_log: yes  # Don't log credentials
-
-    - name: Pull latest Docker image
+    - name: Pull the latest calculator image from Docker Hub
       docker_image:
-        name: "{{ docker_image }}"
+        name: harsh2835/spe_mini_project:latest
         source: pull
-        force_source: yes
-      register: image_pull_result
 
-    - name: Display image pull result
-      debug:
-        var: image_pull_result
-
-    - name: Create and start new container
+    - name: Stop and remove the old calculator container if it exists
       docker_container:
-        name: "{{ container_name }}"
-        image: "{{ docker_image }}"
+        name: scientific-calculator
+        state: absent
+
+    - name: Run the new calculator container
+      docker_container:
+        name: scientific-calculator
+        image: harsh2835/spe_mini_project:latest
         state: started
-        restart_policy: unless-stopped
-        ports:
-          - "{{ host_port }}:{{ container_port }}"
-        volumes:
-          - "{{ logs_dir }}:/app/logs"
-          - "{{ data_dir }}:/app/data"
-        env:
-          PYTHONUNBUFFERED: "1"
-          LOG_LEVEL: "INFO"
-        labels:
-          app: "{{ app_name }}"
-          environment: "production"
-          managed_by: "ansible"
-        healthcheck:
-          test: ["CMD", "python", "-c", "from calculator import ScientificCalculator; calc = ScientificCalculator(); print('Health check passed')"]
-          interval: 30s
-          timeout: 10s
-          retries: 3
-          start_period: 40s
-      register: container_result
-
-    - name: Display container creation result
-      debug:
-        var: container_result
-
-    - name: Wait for container to be healthy
-      docker_container_info:
-        name: "{{ container_name }}"
-      register: container_health
-      until: container_health.container.State.Health.Status == "healthy" or container_health.container.State.Health.Status is undefined
-      retries: 10
-      delay: 5
-      ignore_errors: yes
-
-    - name: Verify container is running
-      docker_container_info:
-        name: "{{ container_name }}"
-      register: final_container_info
-
-    - name: Display final container status
-      debug:
-        msg:
-          - "Container Name: {{ final_container_info.container.Name }}"
-          - "Container Status: {{ final_container_info.container.State.Status }}"
-          - "Container Health: {{ final_container_info.container.State.Health.Status | default('Not configured') }}"
-          - "Container Ports: {{ final_container_info.container.NetworkSettings.Ports }}"
-
-    - name: Test calculator functionality
-      shell: |
-        docker exec {{ container_name }} python -c "
-        from calculator import ScientificCalculator
-        calc = ScientificCalculator()
-        print('Testing calculator functions:')
-        print(f'Square root of 9: {calc.square_root(9)}')
-        print(f'Factorial of 5: {calc.factorial(5)}')
-        print(f'Natural log of e: {calc.natural_logarithm(2.718281828459045)}')
-        print(f'2 to the power of 3: {calc.power(2
+        interactive: yes
+        tty: yes
